@@ -1,0 +1,43 @@
+﻿name: Deploy Nuget packages
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+env:
+  DOTNET_VERSION: '6.0'
+  VERSION_SUFFIX: "build-${{ github.run_number }}"
+
+jobs:
+  build-and-deploy:
+    runs-on: windows-latest
+    steps:
+      - name: 'Checkout GitHub Action'
+        uses: actions/checkout@v2
+
+      - name: Setup DotNet ${{ env.DOTNET_VERSION }} Environment
+        uses: actions/setup-dotnet@v1
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Install dependencies
+        run: |
+          dotnet restore Firepuma.WebPush.Abstractions
+          dotnet restore Firepuma.WebPush.Client
+          dotnet restore Firepuma.WebPush.FunctionApp
+          dotnet restore Firepuma.WebPush.Tests
+
+      - name: Test
+        run: dotnet test --no-restore
+
+      - name: Package
+        run: |
+          dotnet pack --configuration Release --output . --version-suffix ${{ env.VERSION_SUFFIX }} Firepuma.WebPush.Abstractions/Firepuma.WebPush.Abstractions.csproj
+          dotnet pack --configuration Release --output . --version-suffix ${{ env.VERSION_SUFFIX }} Firepuma.WebPush.Client/Firepuma.WebPush.Client.csproj
+
+      - name: Publish
+        run: dotnet nuget push *.nupkg --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json

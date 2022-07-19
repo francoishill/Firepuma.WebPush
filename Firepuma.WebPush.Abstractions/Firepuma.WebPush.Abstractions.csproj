@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net6.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+    </PropertyGroup>
+
+    <PropertyGroup>
+        <IsPackable>true</IsPackable>
+        <RepositoryUrl>https://github.com/francoishill/Firepuma.WebPush</RepositoryUrl>
+        <PackageTags>WebPush, Mobile, PWA</PackageTags>
+        <Company>Firepuma</Company>
+        <Authors>Francois Hill</Authors>
+        <Description>This library contains abstractions shared between WebPush Client and FunctionApp.</Description>
+        <VersionPrefix>0.0.1</VersionPrefix>
+    </PropertyGroup>
+
+</Project>
