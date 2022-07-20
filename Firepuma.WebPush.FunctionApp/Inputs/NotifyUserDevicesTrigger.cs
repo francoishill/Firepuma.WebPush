@@ -93,6 +93,10 @@ public class NotifyUserDevicesTrigger
         {
             try
             {
+                log.LogInformation(
+                    "Processing request for DeviceId '{DeviceId}', ApplicationId '{ApplicationId}' and UserId '{UserId}'",
+                    device.DeviceId, requestDto.ApplicationId, device.UserId);
+
                 await SendPushNotificationToDevice(
                     log,
                     webPushDevicesTable,
@@ -139,10 +143,6 @@ public class NotifyUserDevicesTrigger
         CancellationToken cancellationToken)
     {
         var deviceEndpoint = device.DeviceEndpoint;
-
-        log.LogInformation(
-            "Processing request for DeviceEndpoint '{DeviceEndpoint}' and ApplicationId '{ApplicationId}'",
-            deviceEndpoint, requestDto.ApplicationId);
 
         var command = new NotifyDevice.Command
         {
