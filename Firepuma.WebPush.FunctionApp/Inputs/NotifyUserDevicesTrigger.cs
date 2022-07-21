@@ -7,6 +7,7 @@ using Azure.Messaging.EventGrid;
 using Firepuma.WebPush.Abstractions.Infrastructure.Validation;
 using Firepuma.WebPush.Abstractions.Models.Dtos.EventGridMessages;
 using Firepuma.WebPush.Abstractions.Models.Dtos.ServiceBusMessages;
+using Firepuma.WebPush.Abstractions.Models.ValueObjects;
 using Firepuma.WebPush.FunctionApp.Commands;
 using Firepuma.WebPush.FunctionApp.Config;
 using Firepuma.WebPush.FunctionApp.Infrastructure.Helpers;
@@ -97,7 +98,7 @@ public class NotifyUserDevicesTrigger
                     "Processing request for DeviceId '{DeviceId}', ApplicationId '{ApplicationId}' and UserId '{UserId}'",
                     device.DeviceId, requestDto.ApplicationId, device.UserId);
 
-                await SendPushNotificationToDevice(
+                var result = await SendPushNotificationToDevice(
                     log,
                     webPushDevicesTable,
                     unsubscribedDevicesCollector,
@@ -108,7 +109,14 @@ public class NotifyUserDevicesTrigger
                     eventCollector,
                     cancellationToken);
 
-                successfulCount++;
+                if (result.IsSuccessful)
+                {
+                    successfulCount++;
+                }
+                else
+                {
+                    errors.Add($"Unable to send notification to device, reason: {result.Failure.Reason.ToString()}, message: {result.Failure.Message}");
+                }
             }
             catch (Exception exception)
             {
@@ -131,7 +139,7 @@ public class NotifyUserDevicesTrigger
         }
     }
 
-    private async Task SendPushNotificationToDevice(
+    private async Task<SuccessOrFailure<NotifyDevice.SuccessfulResult, NotifyDevice.FailureResult>> SendPushNotificationToDevice(
         ILogger log,
         CloudTable webPushDevicesTable,
         IAsyncCollector<UnsubscribedPushDevices> unsubscribedDevicesCollector,
@@ -190,6 +198,8 @@ public class NotifyUserDevicesTrigger
                 throw new Exception($"Failed to send push notification to device endpoint '{deviceEndpoint}', failure reason '{failure.Reason.ToString()}', failure message '{failure.Message}'");
             }
         }
+
+        return result;
     }
 
     private static async Task AddUnsubscribedDevice(
