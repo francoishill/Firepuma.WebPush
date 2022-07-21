@@ -3,6 +3,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Firepuma.WebPush.Abstractions.Models.ValueObjects;
 using Firepuma.WebPush.FunctionApp.Models.TableModels;
+using Firepuma.WebPush.FunctionApp.Models.TableProviders;
 using MediatR;
 using Microsoft.Azure.Cosmos.Table;
 
@@ -16,10 +17,8 @@ namespace Firepuma.WebPush.FunctionApp.Commands;
 
 public static class AddDevice
 {
-    public class Command : IRequest<SuccessOrFailure<SuccessfulResult, FailureResult>>
+    public class Command : BaseCommand, IRequest<SuccessOrFailure<SuccessfulResult, FailureResult>>
     {
-        public CloudTable WebPushDevicesTable { get; set; }
-
         public string ApplicationId { get; set; }
         public string DeviceId { get; set; }
         public string UserId { get; set; }
@@ -53,6 +52,14 @@ public static class AddDevice
 
     public class Handler : IRequestHandler<Command, SuccessOrFailure<SuccessfulResult, FailureResult>>
     {
+        private readonly WebPushDeviceTableProvider _webPushDeviceTableProvider;
+
+        public Handler(
+            WebPushDeviceTableProvider webPushDeviceTableProvider)
+        {
+            _webPushDeviceTableProvider = webPushDeviceTableProvider;
+        }
+
         public async Task<SuccessOrFailure<SuccessfulResult, FailureResult>> Handle(Command command, CancellationToken cancellationToken)
         {
             var webPushDevice = new WebPushDevice(
@@ -65,7 +72,7 @@ public static class AddDevice
 
             try
             {
-                await command.WebPushDevicesTable.ExecuteAsync(TableOperation.Insert(webPushDevice), cancellationToken);
+                await _webPushDeviceTableProvider.Table.ExecuteAsync(TableOperation.Insert(webPushDevice), cancellationToken);
                 return new SuccessfulResult();
             }
             catch (StorageException storageException) when (storageException.RequestInformation.HttpStatusCode == (int)HttpStatusCode.Conflict)

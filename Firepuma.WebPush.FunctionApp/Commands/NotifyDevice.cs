@@ -20,7 +20,7 @@ namespace Firepuma.WebPush.FunctionApp.Commands;
 
 public static class NotifyDevice
 {
-    public class Command : IRequest<SuccessOrFailure<SuccessfulResult, FailureResult>>
+    public class Command : BaseCommand, IRequest<SuccessOrFailure<SuccessfulResult, FailureResult>>
     {
         public string DeviceEndpoint { get; init; }
         public string P256dh { get; init; }

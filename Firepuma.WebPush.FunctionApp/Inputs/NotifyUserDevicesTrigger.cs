@@ -10,10 +10,9 @@ using Firepuma.WebPush.Abstractions.Models.Dtos.ServiceBusMessages;
 using Firepuma.WebPush.Abstractions.Models.ValueObjects;
 using Firepuma.WebPush.FunctionApp.Commands;
 using Firepuma.WebPush.FunctionApp.Config;
-using Firepuma.WebPush.FunctionApp.Infrastructure.Helpers;
 using Firepuma.WebPush.FunctionApp.Models.TableModels;
+using Firepuma.WebPush.FunctionApp.Queries;
 using MediatR;
-using Microsoft.Azure.Cosmos.Table;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Extensions.EventGrid;
 using Microsoft.Extensions.Logging;
@@ -42,8 +41,6 @@ public class NotifyUserDevicesTrigger
         [ServiceBusTrigger("%QueueName%", Connection = "ServiceBus")] string webPushMessageRequest,
         string messageId,
         ILogger log,
-        [Table("WebPushDevices")] CloudTable webPushDevicesTable,
-        [Table("UnsubscribedPushDevices")] IAsyncCollector<UnsubscribedPushDevices> unsubscribedDevicesCollector,
         [EventGrid(TopicEndpointUri = "EventGridEndpoint", TopicKeySetting = "EventGridKey")] IAsyncCollector<EventGridEvent> eventCollector,
         CancellationToken cancellationToken)
     {
@@ -61,14 +58,12 @@ public class NotifyUserDevicesTrigger
 
         var eventGridSubject = _eventGridOptions.Value.SubjectFactory(applicationId);
 
-        var tableQuery = new TableQuery<WebPushDevice>().Where(
-            TableQuery.CombineFilters(
-                TableQuery.GenerateFilterCondition(nameof(WebPushDevice.PartitionKey), QueryComparisons.Equal, applicationId),
-                TableOperators.And,
-                TableQuery.GenerateFilterCondition(nameof(WebPushDevice.UserId), QueryComparisons.Equal, userId)
-            ));
-
-        var devices = (await AzureTableHelper.GetTableRecordsAsync(webPushDevicesTable, tableQuery, cancellationToken)).ToList();
+        var query = new GetAllDevicesOfUser.Query
+        {
+            ApplicationId = applicationId,
+            UserId = userId,
+        };
+        var devices = await _mediator.Send(query, cancellationToken);
 
         if (devices.Count == 0)
         {
@@ -100,8 +95,6 @@ public class NotifyUserDevicesTrigger
 
                 var result = await SendPushNotificationToDevice(
                     log,
-                    webPushDevicesTable,
-                    unsubscribedDevicesCollector,
                     device,
                     requestDto,
                     applicationId,
@@ -141,8 +134,6 @@ public class NotifyUserDevicesTrigger
 
     private async Task<SuccessOrFailure<NotifyDevice.SuccessfulResult, NotifyDevice.FailureResult>> SendPushNotificationToDevice(
         ILogger log,
-        CloudTable webPushDevicesTable,
-        IAsyncCollector<UnsubscribedPushDevices> unsubscribedDevicesCollector,
         WebPushDevice device,
         NotifyUserDevicesRequestDto requestDto,
         string applicationId,
@@ -174,8 +165,13 @@ public class NotifyUserDevicesTrigger
             {
                 log.LogWarning("Push device endpoint does not exist anymore: '{DeviceEndpoint}'", deviceEndpoint);
 
-                await AddUnsubscribedDevice(unsubscribedDevicesCollector, applicationId, failure, device, cancellationToken);
-                await RemoveDevice(webPushDevicesTable, device, cancellationToken);
+                var moveCommand = new MoveToUnsubscribedDevices.Command
+                {
+                    Device = device,
+                    UnsubscribeReason = $"{failure.Reason.ToString()} {failure.Message}",
+                };
+
+                await _mediator.Send(moveCommand, cancellationToken);
 
                 const string eventType = "Firepuma.WebPush.DeviceUnsubscribed";
 
@@ -200,38 +196,5 @@ public class NotifyUserDevicesTrigger
         }
 
         return result;
-    }
-
-    private static async Task AddUnsubscribedDevice(
-        IAsyncCollector<UnsubscribedPushDevices> unsubscribedDevicesCollector,
-        string applicationId,
-        NotifyDevice.FailureResult failure,
-        WebPushDevice device,
-        CancellationToken cancellationToken)
-    {
-        var deviceEndpoint = device.DeviceEndpoint;
-
-        var unsubscribeReason = $"{failure.Reason.ToString()} {failure.Message}";
-        var unsubscribedDevice = new UnsubscribedPushDevices
-        {
-            PartitionKey = applicationId,
-            RowKey = StringUtils.CreateMd5(deviceEndpoint),
-            DeviceId = device.DeviceId,
-            UserId = device.UserId,
-            DeviceEndpoint = deviceEndpoint,
-            UnsubscribeReason = unsubscribeReason,
-        };
-
-        await unsubscribedDevicesCollector.AddAsync(unsubscribedDevice, cancellationToken);
-    }
-
-    private static async Task RemoveDevice(
-        CloudTable webPushDevicesTable,
-        WebPushDevice device,
-        CancellationToken cancellationToken)
-    {
-        var deleteOperation = TableOperation.Delete(device);
-
-        await webPushDevicesTable.ExecuteAsync(deleteOperation, cancellationToken);
     }
 }

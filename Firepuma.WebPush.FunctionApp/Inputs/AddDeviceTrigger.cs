@@ -9,7 +9,6 @@ using Firepuma.WebPush.FunctionApp.Infrastructure.Factories;
 using MediatR;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Azure.Cosmos.Table;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Extensions.Http;
 using Microsoft.Extensions.Logging;
@@ -33,7 +32,6 @@ public class AddDeviceTrigger
     public async Task<IActionResult> RunAsync(
         [HttpTrigger(AuthorizationLevel.Function, "put", Route = null)] HttpRequest req,
         ILogger log,
-        [Table("WebPushDevices")] CloudTable webPushDevicesTable,
         CancellationToken cancellationToken)
     {
         log.LogInformation("C# HTTP trigger function processed a request");
@@ -49,8 +47,6 @@ public class AddDeviceTrigger
 
         var command = new AddDevice.Command
         {
-            WebPushDevicesTable = webPushDevicesTable,
-            
             ApplicationId = requestDto.ApplicationId,
             DeviceId = requestDto.DeviceId,
             UserId = requestDto.UserId,
