@@ -26,6 +26,7 @@ public class Startup : FunctionsStartup
 
         AddAutoMapper(services);
         AddMediator(services);
+        AddCloudTables(services);
 
         AddWebPush(services);
     }
@@ -46,13 +47,34 @@ public class Startup : FunctionsStartup
         services.AddTransient(typeof(IPipelineBehavior<,>), typeof(PerformanceLogBehavior<,>));
         services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ExceptionLogBehavior<,>));
         services.AddTransient(typeof(IPipelineBehavior<,>), typeof(AuditCommandsBehaviour<,>));
+    }
 
+    private static void AddAutoMapper(IServiceCollection services)
+    {
+        services.AddAutoMapper(typeof(Startup));
+        services.BuildServiceProvider().GetRequiredService<IMapper>().ConfigurationProvider.AssertConfigurationIsValid();
+    }
+
+    private static void AddCloudTables(IServiceCollection services)
+    {
         var storageConnectionString = EnvironmentVariableHelpers.GetRequiredEnvironmentVariable("AzureWebJobsStorage");
         services.AddSingleton<CloudStorageAccount>(CloudStorageAccount.Parse(storageConnectionString));
 
         AddTableProvider(services, "WebPushCommandExecutions", table => new CommandExecutionTableProvider(table));
         AddTableProvider(services, "WebPushDevices", table => new WebPushDeviceTableProvider(table));
         AddTableProvider(services, "UnsubscribedPushDevices", table => new UnsubscribedDeviceTableProvider(table));
+    }
+
+    private static void AddWebPush(IServiceCollection services)
+    {
+        var webPushPublicKey = EnvironmentVariableHelpers.GetRequiredEnvironmentVariable("WebPushPublicKey");
+        var webPushPrivateKey = EnvironmentVariableHelpers.GetRequiredEnvironmentVariable("WebPushPrivateKey");
+
+        services.Configure<WebPushOptions>(opt =>
+        {
+            opt.PushPublicKey = webPushPublicKey;
+            opt.PushPrivateKey = webPushPrivateKey;
+        });
     }
 
     private static void AddTableProvider<TProvider>(
@@ -72,23 +94,5 @@ public class Startup : FunctionsStartup
 
         //TODO: Find a better way
         services.BuildServiceProvider().GetRequiredService<TProvider>().Table.CreateIfNotExists();
-    }
-
-    private static void AddAutoMapper(IServiceCollection services)
-    {
-        services.AddAutoMapper(typeof(Startup));
-        services.BuildServiceProvider().GetRequiredService<IMapper>().ConfigurationProvider.AssertConfigurationIsValid();
-    }
-
-    private static void AddWebPush(IServiceCollection services)
-    {
-        var webPushPublicKey = EnvironmentVariableHelpers.GetRequiredEnvironmentVariable("WebPushPublicKey");
-        var webPushPrivateKey = EnvironmentVariableHelpers.GetRequiredEnvironmentVariable("WebPushPrivateKey");
-
-        services.Configure<WebPushOptions>(opt =>
-        {
-            opt.PushPublicKey = webPushPublicKey;
-            opt.PushPrivateKey = webPushPrivateKey;
-        });
     }
 }
