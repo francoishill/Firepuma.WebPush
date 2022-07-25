@@ -59,7 +59,7 @@ public class AddDeviceTrigger
 
         if (!result.IsSuccessful)
         {
-            return HttpResponseFactory.CreateBadRequestResponse(new[] { $"{result.Failure.Reason}, {result.Failure.Message}" });
+            return HttpResponseFactory.CreateBadRequestResponse(new[] { $"{result.FailedReason.ToString()}, {string.Join(", ", result.FailedErrors)}" });
         }
 
         return new OkResult();

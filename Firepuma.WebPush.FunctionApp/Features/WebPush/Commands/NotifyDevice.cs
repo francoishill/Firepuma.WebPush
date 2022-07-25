@@ -22,7 +22,7 @@ namespace Firepuma.WebPush.FunctionApp.Features.WebPush.Commands;
 
 public static class NotifyDevice
 {
-    public class Command : BaseCommand, IRequest<SuccessOrFailure<SuccessfulResult, FailureResult>>
+    public class Command : BaseCommand, IRequest<Result>
     {
         public string DeviceEndpoint { get; init; }
         public string P256dh { get; init; }
@@ -40,30 +40,42 @@ public static class NotifyDevice
         // public string MessageUniqueTopicId { get; init; } //TODO: could not get topic working, tested Chrome and MSEdge browsers
     }
 
-    public class SuccessfulResult
-    {
-        // Empty result for now
-    }
 
-    public class FailureResult
+    public class Result
     {
-        public FailureReason Reason { get; set; }
-        public string Message { get; set; }
+        public bool IsSuccessful { get; set; }
 
-        public FailureResult(FailureReason reason, string message)
+        public FailureReason? FailedReason { get; set; }
+        public string[] FailedErrors { get; set; }
+
+        private Result(
+            bool isSuccessful,
+            FailureReason? failedReason,
+            string[] failedErrors)
         {
-            Reason = reason;
-            Message = message;
+            IsSuccessful = isSuccessful;
+            FailedReason = failedReason;
+            FailedErrors = failedErrors;
+        }
+
+        public static Result Success()
+        {
+            return new Result(true, null, null);
+        }
+
+        public static Result Failed(FailureReason reason, params string[] errors)
+        {
+            return new Result(false, reason, errors);
+        }
+
+        public enum FailureReason
+        {
+            DeviceGone,
         }
     }
 
-    public enum FailureReason
-    {
-        DeviceGone,
-    }
 
-
-    public class Handler : IRequestHandler<Command, SuccessOrFailure<SuccessfulResult, FailureResult>>
+    public class Handler : IRequestHandler<Command, Result>
     {
         private readonly IOptions<WebPushOptions> _options;
 
@@ -73,7 +85,7 @@ public static class NotifyDevice
             _options = options;
         }
 
-        public async Task<SuccessOrFailure<SuccessfulResult, FailureResult>> Handle(Command command, CancellationToken cancellationToken)
+        public async Task<Result> Handle(Command command, CancellationToken cancellationToken)
         {
             var deviceEndpoint = command.DeviceEndpoint;
             var p256dh = command.P256dh;
@@ -126,11 +138,11 @@ public static class NotifyDevice
                     },
                     cancellationToken);
 
-                return new SuccessfulResult();
+                return Result.Success();
             }
             catch (WebPushException webPushException) when (webPushException.StatusCode == HttpStatusCode.Gone)
             {
-                return new FailureResult(FailureReason.DeviceGone, webPushException.Message);
+                return Result.Failed(Result.FailureReason.DeviceGone, webPushException.Message);
             }
         }
     }

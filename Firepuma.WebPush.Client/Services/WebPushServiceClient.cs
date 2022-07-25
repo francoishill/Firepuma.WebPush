@@ -3,8 +3,7 @@ using Azure.Messaging.ServiceBus;
 using Firepuma.WebPush.Abstractions.Infrastructure.Validation;
 using Firepuma.WebPush.Abstractions.Models.Dtos.HttpRequests;
 using Firepuma.WebPush.Abstractions.Models.Dtos.ServiceBusMessages;
-using Firepuma.WebPush.Abstractions.Models.ValueObjects;
-using Firepuma.WebPush.Client.Models.ValueObjects;
+using Firepuma.WebPush.Client.Services.Results;
 using Newtonsoft.Json;
 
 namespace Firepuma.WebPush.Client.Services;
@@ -25,11 +24,11 @@ public class WebPushServiceClient : IWebPushServiceClient
         _httpClient = httpClientFactory.CreateClient(HTTP_CLIENT_NAME);
     }
 
-    public async Task<SuccessOrFailure<SuccessfulResult, FailedResult>> AddWebPushDevice(AddDeviceRequestDto requestDto, CancellationToken cancellationToken)
+    public async Task<AddWebPushDeviceResult> AddWebPushDevice(AddDeviceRequestDto requestDto, CancellationToken cancellationToken)
     {
         if (!ValidationHelpers.ValidateDataAnnotations(requestDto, out var validationResults))
         {
-            return new FailedResult(FailedResult.FailedReason.InputValidationFailed, validationResults.Select(r => r.ErrorMessage).ToArray());
+            return AddWebPushDeviceResult.Failed(AddWebPushDeviceResult.FailureReason.InputValidationFailed, validationResults.Select(r => r.ErrorMessage).ToArray());
         }
 
         var response = await _httpClient.PutAsync("/api/AddDeviceTrigger", new StringContent(JsonConvert.SerializeObject(requestDto)), cancellationToken);
@@ -40,22 +39,22 @@ public class WebPushServiceClient : IWebPushServiceClient
 
             if (response.StatusCode == HttpStatusCode.BadRequest)
             {
-                return new FailedResult(
-                    FailedResult.FailedReason.InputValidationFailed,
+                return AddWebPushDeviceResult.Failed(
+                    AddWebPushDeviceResult.FailureReason.InputValidationFailed,
                     TryDeserializeErrorsResponseDto(responseBody, out var errorsResponseDto) ? errorsResponseDto.Errors : new[] { responseBody });
             }
 
-            return new FailedResult(FailedResult.FailedReason.Unknown, new[] { responseBody });
+            return AddWebPushDeviceResult.Failed(AddWebPushDeviceResult.FailureReason.Unknown, responseBody);
         }
 
-        return new SuccessfulResult();
+        return AddWebPushDeviceResult.Success();
     }
 
-    public async Task<SuccessOrFailure<SuccessfulResult, FailedResult>> EnqueueWebPush(NotifyUserDevicesRequestDto requestDto, CancellationToken cancellationToken)
+    public async Task<EnqueueWebPushResult> EnqueueWebPush(NotifyUserDevicesRequestDto requestDto, CancellationToken cancellationToken)
     {
         if (!ValidationHelpers.ValidateDataAnnotations(requestDto, out var validationResults))
         {
-            return new FailedResult(FailedResult.FailedReason.InputValidationFailed, validationResults.Select(r => r.ErrorMessage).ToArray());
+            return EnqueueWebPushResult.Failed(EnqueueWebPushResult.FailureReason.InputValidationFailed, validationResults.Select(r => r.ErrorMessage).ToArray());
         }
 
         var messageJson = JsonConvert.SerializeObject(requestDto);
@@ -69,7 +68,7 @@ public class WebPushServiceClient : IWebPushServiceClient
 
         await _serviceBusSender.SendMessageAsync(message, cancellationToken);
 
-        return new SuccessfulResult();
+        return EnqueueWebPushResult.Success();
     }
 
     private static bool TryDeserializeErrorsResponseDto(string responseBody, out ErrorsResponseDto errorsResponseDto)

@@ -1,7 +1,6 @@
 ﻿using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
-using Firepuma.WebPush.Abstractions.Models.ValueObjects;
 using Firepuma.WebPush.FunctionApp.Features.WebPush.TableModels;
 using Firepuma.WebPush.FunctionApp.Features.WebPush.TableProviders;
 using Firepuma.WebPush.FunctionApp.Infrastructure.CommandHandling;
@@ -19,7 +18,7 @@ namespace Firepuma.WebPush.FunctionApp.Features.WebPush.Commands;
 
 public static class AddDevice
 {
-    public class Command : BaseCommand, IRequest<SuccessOrFailure<SuccessfulResult, FailureResult>>
+    public class Command : BaseCommand, IRequest<Result>
     {
         public string ApplicationId { get; set; }
         public string DeviceId { get; set; }
@@ -33,30 +32,41 @@ public static class AddDevice
         public string AuthSecret { get; set; }
     }
 
-    public class SuccessfulResult
+    public class Result
     {
-        // Empty result for now
-    }
+        public bool IsSuccessful { get; set; }
 
-    public class FailureResult
-    {
-        public FailureReason Reason { get; set; }
-        public string Message { get; set; }
+        public FailureReason? FailedReason { get; set; }
+        public string[] FailedErrors { get; set; }
 
-        public FailureResult(FailureReason reason, string message)
+        private Result(
+            bool isSuccessful,
+            FailureReason? failedReason,
+            string[] failedErrors)
         {
-            Reason = reason;
-            Message = message;
+            IsSuccessful = isSuccessful;
+            FailedReason = failedReason;
+            FailedErrors = failedErrors;
+        }
+
+        public static Result Success()
+        {
+            return new Result(true, null, null);
+        }
+
+        public static Result Failed(FailureReason reason, params string[] errors)
+        {
+            return new Result(false, reason, errors);
+        }
+
+        public enum FailureReason
+        {
+            DeviceAlreadyExists,
         }
     }
 
-    public enum FailureReason
-    {
-        DeviceAlreadyExists,
-    }
 
-
-    public class Handler : IRequestHandler<Command, SuccessOrFailure<SuccessfulResult, FailureResult>>
+    public class Handler : IRequestHandler<Command, Result>
     {
         private readonly WebPushDeviceTableProvider _webPushDeviceTableProvider;
 
@@ -66,7 +76,7 @@ public static class AddDevice
             _webPushDeviceTableProvider = webPushDeviceTableProvider;
         }
 
-        public async Task<SuccessOrFailure<SuccessfulResult, FailureResult>> Handle(Command command, CancellationToken cancellationToken)
+        public async Task<Result> Handle(Command command, CancellationToken cancellationToken)
         {
             var webPushDevice = new WebPushDevice(
                 command.ApplicationId,
@@ -79,11 +89,11 @@ public static class AddDevice
             try
             {
                 await _webPushDeviceTableProvider.Table.ExecuteAsync(TableOperation.Insert(webPushDevice), cancellationToken);
-                return new SuccessfulResult();
+                return Result.Success();
             }
             catch (StorageException storageException) when (storageException.RequestInformation.HttpStatusCode == (int)HttpStatusCode.Conflict)
             {
-                return new FailureResult(FailureReason.DeviceAlreadyExists, $"The device (id '{command.DeviceId}' and application id '{command.ApplicationId}') is already added and cannot be added again");
+                return Result.Failed(Result.FailureReason.DeviceAlreadyExists, $"The device (id '{command.DeviceId}' and application id '{command.ApplicationId}') is already added and cannot be added again");
             }
         }
     }

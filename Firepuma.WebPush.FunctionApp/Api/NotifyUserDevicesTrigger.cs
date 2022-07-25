@@ -7,7 +7,6 @@ using Azure.Messaging.EventGrid;
 using Firepuma.WebPush.Abstractions.Infrastructure.Validation;
 using Firepuma.WebPush.Abstractions.Models.Dtos.EventGridMessages;
 using Firepuma.WebPush.Abstractions.Models.Dtos.ServiceBusMessages;
-using Firepuma.WebPush.Abstractions.Models.ValueObjects;
 using Firepuma.WebPush.FunctionApp.Features.WebPush.Commands;
 using Firepuma.WebPush.FunctionApp.Features.WebPush.Queries;
 using Firepuma.WebPush.FunctionApp.Features.WebPush.TableModels;
@@ -108,7 +107,7 @@ public class NotifyUserDevicesTrigger
                 }
                 else
                 {
-                    errors.Add($"Unable to send notification to device, reason: {result.Failure.Reason.ToString()}, message: {result.Failure.Message}");
+                    errors.Add($"Unable to send notification to device, reason: {result.FailedReason.ToString()}, errors: {string.Join(", ", result.FailedErrors)}");
                 }
             }
             catch (Exception exception)
@@ -132,7 +131,7 @@ public class NotifyUserDevicesTrigger
         }
     }
 
-    private async Task<SuccessOrFailure<NotifyDevice.SuccessfulResult, NotifyDevice.FailureResult>> SendPushNotificationToDevice(
+    private async Task<NotifyDevice.Result> SendPushNotificationToDevice(
         ILogger log,
         WebPushDevice device,
         NotifyUserDevicesRequestDto requestDto,
@@ -159,16 +158,14 @@ public class NotifyUserDevicesTrigger
 
         if (!result.IsSuccessful)
         {
-            var failure = result.Failure;
-
-            if (failure.Reason == NotifyDevice.FailureReason.DeviceGone)
+            if (result.FailedReason == NotifyDevice.Result.FailureReason.DeviceGone)
             {
                 log.LogWarning("Push device endpoint does not exist anymore: '{DeviceEndpoint}'", deviceEndpoint);
 
                 var moveCommand = new MoveToUnsubscribedDevices.Command
                 {
                     Device = device,
-                    UnsubscribeReason = $"{failure.Reason.ToString()} {failure.Message}",
+                    UnsubscribeReason = $"{result.FailedReason.ToString()} {string.Join(", ", result.FailedErrors)}",
                 };
 
                 await _mediator.Send(moveCommand, cancellationToken);
@@ -188,10 +185,10 @@ public class NotifyUserDevicesTrigger
             else
             {
                 log.LogError(
-                    "Failed to send push notification to device endpoint '{DeviceEndpoint}', failure reason '{Reason}', failure message '{Message}'",
-                    deviceEndpoint, failure.Reason.ToString(), failure.Message);
+                    "Failed to send push notification to device endpoint '{DeviceEndpoint}', failure reason '{Reason}', failure errors '{Errors}'",
+                    deviceEndpoint, result.FailedReason.ToString(), string.Join(", ", result.FailedErrors));
 
-                throw new Exception($"Failed to send push notification to device endpoint '{deviceEndpoint}', failure reason '{failure.Reason.ToString()}', failure message '{failure.Message}'");
+                throw new Exception($"Failed to send push notification to device endpoint '{deviceEndpoint}', failure reason '{result.FailedReason.ToString()}', failure errors '{string.Join(", ", result.FailedErrors)}'");
             }
         }
 

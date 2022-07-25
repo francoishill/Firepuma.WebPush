@@ -44,7 +44,11 @@ public class WebPushController : ControllerBase
 
         if (!result.IsSuccessful)
         {
-            return new BadRequestObjectResult(result.Failure.Errors);
+            return new BadRequestObjectResult(new
+            {
+                FailedReason = result.FailedReason.ToString(),
+                Errors = result.FailedErrors,
+            });
         }
 
         return Ok();
@@ -73,7 +77,11 @@ public class WebPushController : ControllerBase
 
         if (!result.IsSuccessful)
         {
-            return new BadRequestObjectResult(result.Failure.Errors);
+            return new BadRequestObjectResult(new
+            {
+                FailedReason = result.FailedReason.ToString(),
+                Errors = result.FailedErrors,
+            });
         }
 
         return Accepted();
