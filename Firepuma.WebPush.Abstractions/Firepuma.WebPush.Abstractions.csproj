@@ -12,7 +12,6 @@
         <Company>Firepuma</Company>
         <Authors>Francois Hill</Authors>
         <Description>This library contains abstractions shared between WebPush Client and FunctionApp.</Description>
-        <VersionPrefix>1.0.1</VersionPrefix>
     </PropertyGroup>
 
 </Project>
