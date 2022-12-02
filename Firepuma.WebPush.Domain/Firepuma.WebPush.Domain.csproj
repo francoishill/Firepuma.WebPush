@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net7.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <PackageReference Include="Firepuma.CommandsAndQueries.Abstractions" Version="0.8.3" />
+      <PackageReference Include="Firepuma.DatabaseRepositories.Abstractions" Version="0.11.3" />
+      <PackageReference Include="Firepuma.DatabaseRepositories.MongoDb.Abstractions" Version="0.11.3" />
+    </ItemGroup>
+
+</Project>

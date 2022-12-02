@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net7.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <PackageReference Include="Firepuma.CommandsAndQueries.MongoDb" Version="0.8.3" />
+      <PackageReference Include="Firepuma.DatabaseRepositories.MongoDb" Version="0.11.3" />
+      <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="7.0.0" />
+      <PackageReference Include="WebPush" Version="1.0.12" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\Firepuma.WebPush.Domain\Firepuma.WebPush.Domain.csproj" />
+    </ItemGroup>
+
+</Project>
