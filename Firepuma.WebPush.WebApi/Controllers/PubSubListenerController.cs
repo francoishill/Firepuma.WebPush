@@ -1,5 +1,5 @@
+using System.Text.Json;
 using Firepuma.BusMessaging.Abstractions.Services;
-using Firepuma.BusMessaging.GooglePubSub.Models;
 using Firepuma.Dtos.WebPush.BusMessages;
 using Firepuma.WebPush.Domain.Commands;
 using Firepuma.WebPush.Domain.Entities;
@@ -30,7 +30,7 @@ public class PubSubListenerController : ControllerBase
 
     [HttpPost]
     public async Task<IActionResult> HandleBusMessageAsync(
-        PubSubMessageEnvelope envelope,
+        JsonElement envelope,
         CancellationToken cancellationToken)
     {
         if (!_messageBusDeserializer.TryDeserializeMessage(envelope, out var deserializedMessage, out var messageExtraDetails, out var validationError))
@@ -38,13 +38,15 @@ public class PubSubListenerController : ControllerBase
             return BadRequest(validationError);
         }
 
+        var senderApplicationId = messageExtraDetails.SourceId;
+
         if (deserializedMessage is AddDeviceRequest addDeviceRequest)
         {
-            await AddDeviceAsync(addDeviceRequest, messageExtraDetails.SenderApplicationId, cancellationToken);
+            await AddDeviceAsync(addDeviceRequest, senderApplicationId, cancellationToken);
         }
         else if (deserializedMessage is NotifyUserDevicesRequest notifyUserDevicesRequest)
         {
-            await NotifyUserDevicesAsync(notifyUserDevicesRequest, messageExtraDetails.SenderApplicationId, cancellationToken);
+            await NotifyUserDevicesAsync(notifyUserDevicesRequest, senderApplicationId, cancellationToken);
         }
         else
         {
