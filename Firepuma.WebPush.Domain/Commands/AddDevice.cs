@@ -2,6 +2,7 @@
 using Firepuma.CommandsAndQueries.Abstractions.Entities.Attributes;
 using Firepuma.WebPush.Domain.Entities;
 using Firepuma.WebPush.Domain.Repositories;
+using FluentValidation;
 using MediatR;
 
 // ReSharper disable MemberCanBePrivate.Global
@@ -32,6 +33,29 @@ public static class AddDevice
     {
     }
 
+    public sealed class Validator : AbstractValidator<Payload>
+    {
+        public Validator()
+        {
+            RuleFor(x => x.ApplicationId)
+                .NotEmpty();
+
+            RuleFor(x => x.DeviceId)
+                .NotEmpty();
+
+            RuleFor(x => x.UserId)
+                .NotEmpty();
+
+            RuleFor(x => x.DeviceEndpoint)
+                .NotEmpty();
+
+            RuleFor(x => x.P256dh)
+                .NotEmpty();
+
+            RuleFor(x => x.AuthSecret)
+                .NotEmpty();
+        }
+    }
 
     public class Handler : IRequestHandler<Payload, Result>
     {

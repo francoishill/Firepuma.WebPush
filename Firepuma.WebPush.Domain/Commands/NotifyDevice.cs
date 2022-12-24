@@ -2,6 +2,7 @@
 using Firepuma.CommandsAndQueries.Abstractions.Entities.Attributes;
 using Firepuma.WebPush.Domain.Services;
 using Firepuma.WebPush.Domain.Services.ServiceRequests;
+using FluentValidation;
 using MediatR;
 
 // ReSharper disable MemberCanBePrivate.Global
@@ -37,6 +38,14 @@ public static class NotifyDevice
     {
     }
 
+    public sealed class Validator : AbstractValidator<Payload>
+    {
+        public Validator()
+        {
+            RuleFor(x => x.MessageTitle)
+                .NotEmpty();
+        }
+    }
 
     public class Handler : IRequestHandler<Payload, Result>
     {
