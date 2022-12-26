@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using Firepuma.BusMessaging.Abstractions.Services;
 using Firepuma.BusMessaging.GooglePubSub.Config;
 using Firepuma.EventMediation.IntegrationEvents.Abstractions;
@@ -53,7 +54,11 @@ public class PubSubListenerController : ControllerBase
             return BadRequest("Unknown message type (not an integration event)");
         }
 
-        var deserializeOptions = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+        var deserializeOptions = new JsonSerializerOptions
+        {
+            PropertyNameCaseInsensitive = true,
+            Converters = { new JsonStringEnumConverter() },
+        };
         var messagePayload = JsonSerializer.Deserialize<JsonDocument>(parsedMessageEnvelope.MessagePayload ?? "{}", deserializeOptions);
 
         if (messagePayload == null)
