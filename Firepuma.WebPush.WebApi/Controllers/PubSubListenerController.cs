@@ -3,6 +3,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Firepuma.BusMessaging.Abstractions.Services;
 using Firepuma.BusMessaging.GooglePubSub.Config;
+using Firepuma.DatabaseRepositories.MongoDb.Abstractions.Indexes;
 using Firepuma.EventMediation.IntegrationEvents.Abstractions;
 using Firepuma.EventMediation.IntegrationEvents.ValueObjects;
 using Firepuma.WebPush.Domain.Plumbing.IntegrationEvents.Abstractions;
@@ -18,17 +19,20 @@ public class PubSubListenerController : ControllerBase
     private readonly IBusMessageParser _busMessageParser;
     private readonly IIntegrationEventsMappingCache _mappingCache;
     private readonly IIntegrationEventHandler _integrationEventHandler;
+    private readonly IMongoIndexesApplier _mongoIndexesApplier;
 
     public PubSubListenerController(
         ILogger<PubSubListenerController> logger,
         IBusMessageParser busMessageParser,
         IIntegrationEventsMappingCache mappingCache,
-        IIntegrationEventHandler integrationEventHandler)
+        IIntegrationEventHandler integrationEventHandler,
+        IMongoIndexesApplier mongoIndexesApplier)
     {
         _logger = logger;
         _busMessageParser = busMessageParser;
         _mappingCache = mappingCache;
         _integrationEventHandler = integrationEventHandler;
+        _mongoIndexesApplier = mongoIndexesApplier;
     }
 
     [HttpPost]
@@ -46,7 +50,7 @@ public class PubSubListenerController : ControllerBase
             {
                 _logger.LogInformation("Detected a GithubWorkflowEventName message for 'NewRevisionDeployed', now running once-off logic after new deployments");
 
-                _logger.LogError("TODO: implement handling of GithubWorkflowEventName message for 'NewRevisionDeployed'");
+                await _mongoIndexesApplier.ApplyAllIndexes(cancellationToken);
 
                 return Accepted("Detected a GithubWorkflowEventName message for 'NewRevisionDeployed', ran once-off logic after new deployments");
             }

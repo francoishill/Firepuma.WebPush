@@ -8,6 +8,8 @@ using Firepuma.WebPush.Infrastructure.Services;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
+// ReSharper disable ArgumentsStyleNamedExpression
+
 namespace Firepuma.WebPush.Infrastructure;
 
 public static class ServiceCollectionExtensions
@@ -30,13 +32,15 @@ public static class ServiceCollectionExtensions
             IWebPushDeviceRepository,
             WebPushDeviceMongoDbRepository>(
             webPushDevicesCollectionName,
-            (logger, collection, _) => new WebPushDeviceMongoDbRepository(logger, collection));
+            (logger, collection, _) => new WebPushDeviceMongoDbRepository(logger, collection),
+            indexesFactory: WebPushDeviceEntity.GetSchemaIndexes);
 
         services.AddMongoDbRepository<
             UnsubscribedPushDeviceEntity,
             IUnsubscribedPushDeviceRepository,
             UnsubscribedPushDeviceMongoDbRepository>(
             unsubscribedPushDeviceCollectionName,
-            (logger, collection, _) => new UnsubscribedPushDeviceMongoDbRepository(logger, collection));
+            (logger, collection, _) => new UnsubscribedPushDeviceMongoDbRepository(logger, collection),
+            indexesFactory: UnsubscribedPushDeviceEntity.GetSchemaIndexes);
     }
 }
