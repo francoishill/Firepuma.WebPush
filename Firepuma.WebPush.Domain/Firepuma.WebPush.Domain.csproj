@@ -12,8 +12,8 @@
       <PackageReference Include="Firepuma.DatabaseRepositories.Abstractions" Version="0.13.0" />
       <PackageReference Include="Firepuma.DatabaseRepositories.MongoDb.Abstractions" Version="0.13.0" />
       <PackageReference Include="Firepuma.Dtos.WebPush" Version="0.2.0" />
-      <PackageReference Include="Firepuma.EventMediation.IntegrationEvents" Version="0.3.0" />
-      <PackageReference Include="Firepuma.EventMediation.IntegrationEvents.CommandExecution" Version="0.3.0" />
+      <PackageReference Include="Firepuma.EventMediation.IntegrationEvents" Version="0.3.1" />
+      <PackageReference Include="Firepuma.EventMediation.IntegrationEvents.CommandExecution" Version="0.3.1" />
     </ItemGroup>
 
 </Project>
