@@ -11,7 +11,7 @@ env:
   ARTIFACT_REGISTRY: europe-west1-docker.pkg.dev
   IMAGE_REPOSITORY: firepuma-microservices-artifact-repository
   REGION: europe-west1
-  SERVICE: firepuma-webpush
+  SERVICE: webpush-service
 
 jobs:
   build-and-deploy:

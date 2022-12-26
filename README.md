@@ -20,7 +20,7 @@ When using github, the deployment will happen automatically due to the folder co
 To test locally whether the Dockerfile can build, run the following command:
 
 ```shell
-docker build --tag tmp-test-firepuma-webpush --file Firepuma.WebPush.WebApi/Dockerfile .
+docker build --tag tmp-test-webpush-service --file Firepuma.WebPush.WebApi/Dockerfile .
 ```
 
 Run `npx web-push generate-vapid-keys` to generate public and private keypair for WebPush.
