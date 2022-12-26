@@ -12,7 +12,7 @@ using MediatR;
 
 namespace Firepuma.WebPush.Domain.Commands;
 
-public static class MoveToUnsubscribedDevices
+public static class MoveToUnsubscribedDevicesCommand
 {
     public class Payload : BaseCommand<Result>
     {

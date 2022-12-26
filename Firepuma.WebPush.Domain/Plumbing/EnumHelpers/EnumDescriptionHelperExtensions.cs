@@ -1,7 +1,7 @@
 ﻿using System.ComponentModel;
 using System.Globalization;
 
-namespace Firepuma.WebPush.Infrastructure.Helpers;
+namespace Firepuma.WebPush.Domain.Plumbing.EnumHelpers;
 
 public static class EnumDescriptionHelperExtensions
 {

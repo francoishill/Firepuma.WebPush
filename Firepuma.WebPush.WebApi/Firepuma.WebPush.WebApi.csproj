@@ -8,7 +8,6 @@
 
     <ItemGroup>
         <PackageReference Include="AutoMapper.Extensions.Microsoft.DependencyInjection" Version="12.0.0" />
-        <PackageReference Include="Firepuma.BusMessaging.GooglePubSub" Version="0.5.1" />
         <PackageReference Include="Firepuma.Dtos.WebPush" Version="0.2.0" />
         <PackageReference Include="Google.Cloud.Diagnostics.AspNetCore3" Version="5.0.0" />
         <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="7.0.0" />

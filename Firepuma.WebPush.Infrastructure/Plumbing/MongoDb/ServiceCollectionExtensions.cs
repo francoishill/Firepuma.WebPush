@@ -3,7 +3,7 @@ using Firepuma.WebPush.Infrastructure.Config;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Firepuma.WebPush.Infrastructure.Infrastructure.MongoDb;
+namespace Firepuma.WebPush.Infrastructure.Plumbing.MongoDb;
 
 public static class ServiceCollectionExtensions
 {

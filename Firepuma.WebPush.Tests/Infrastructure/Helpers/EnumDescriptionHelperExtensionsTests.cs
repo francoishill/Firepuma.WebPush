@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel;
 using Firepuma.Dtos.WebPush.ValueObjects;
-using Firepuma.WebPush.Infrastructure.Helpers;
+using Firepuma.WebPush.Domain.Plumbing.EnumHelpers;
 
 namespace Firepuma.WebPush.Tests.Infrastructure.Helpers;
 

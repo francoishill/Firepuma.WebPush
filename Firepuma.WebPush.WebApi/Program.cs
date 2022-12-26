@@ -1,11 +1,9 @@
 using AutoMapper;
-using Firepuma.BusMessaging.GooglePubSub;
-using Firepuma.BusMessaging.GooglePubSub.Config;
 using Firepuma.WebPush.Domain.Commands;
 using Firepuma.WebPush.Infrastructure;
-using Firepuma.WebPush.Infrastructure.Infrastructure.CommandHandling;
-using Firepuma.WebPush.Infrastructure.Infrastructure.MongoDb;
-using Firepuma.WebPush.WebApi.BusMessaging;
+using Firepuma.WebPush.Infrastructure.Plumbing.CommandHandling;
+using Firepuma.WebPush.Infrastructure.Plumbing.IntegrationEvents;
+using Firepuma.WebPush.Infrastructure.Plumbing.MongoDb;
 using Firepuma.WebPush.WebApi.Controllers;
 using Firepuma.WebPush.WebApi.Exceptions;
 using Firepuma.WebPush.WebApi.Middleware;
@@ -26,7 +24,7 @@ builder.Services.AddMongoDbRepositories(mongoDbConfigSection, out var mongoDbOpt
 
 var assembliesWithCommandHandlers = new[]
 {
-    typeof(NotifyDevice).Assembly,
+    typeof(NotifyDeviceCommand).Assembly,
 }.Distinct().ToArray();
 
 builder.Services.AddCommandsAndQueriesFunctionality(
@@ -34,10 +32,7 @@ builder.Services.AddCommandsAndQueriesFunctionality(
     mongoDbOptions.CommandExecutionsCollectionName,
     assembliesWithCommandHandlers);
 
-builder.Services.AddGooglePubSubMessageDeserializer(new GooglePubSubBusMessagingDeserializeOptions
-{
-    DeserializedMessageTypeConverterImplementationType = typeof(DeserializedBusMessageTypeConverter),
-});
+builder.Services.AddIntegrationEvents();
 
 var webPushConfigSection = builder.Configuration.GetSection("WebPush");
 builder.Services.AddWebPushFeature(

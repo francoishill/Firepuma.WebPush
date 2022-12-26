@@ -13,7 +13,7 @@ using MediatR;
 
 namespace Firepuma.WebPush.Domain.Commands;
 
-public static class AddDevice
+public static class AddDeviceCommand
 {
     public class Payload : BaseCommand<Result>
     {

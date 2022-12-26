@@ -1,11 +1,9 @@
 using System.Text.Json;
 using Firepuma.BusMessaging.Abstractions.Services;
-using Firepuma.Dtos.WebPush.BusMessages;
-using Firepuma.WebPush.Domain.Commands;
-using Firepuma.WebPush.Domain.Entities;
-using Firepuma.WebPush.Domain.Queries;
-using Firepuma.WebPush.Infrastructure.Helpers;
-using MediatR;
+using Firepuma.BusMessaging.GooglePubSub.Config;
+using Firepuma.EventMediation.IntegrationEvents.Abstractions;
+using Firepuma.EventMediation.IntegrationEvents.ValueObjects;
+using Firepuma.WebPush.Domain.Plumbing.IntegrationEvents.Abstractions;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Firepuma.WebPush.WebApi.Controllers;
@@ -15,204 +13,86 @@ namespace Firepuma.WebPush.WebApi.Controllers;
 public class PubSubListenerController : ControllerBase
 {
     private readonly ILogger<PubSubListenerController> _logger;
-    private readonly IMessageBusDeserializer _messageBusDeserializer;
-    private readonly IMediator _mediator;
+    private readonly IBusMessageParser _busMessageParser;
+    private readonly IIntegrationEventsMappingCache _mappingCache;
+    private readonly IIntegrationEventHandler _integrationEventHandler;
 
     public PubSubListenerController(
         ILogger<PubSubListenerController> logger,
-        IMessageBusDeserializer messageBusDeserializer,
-        IMediator mediator)
+        IBusMessageParser busMessageParser,
+        IIntegrationEventsMappingCache mappingCache,
+        IIntegrationEventHandler integrationEventHandler)
     {
         _logger = logger;
-        _messageBusDeserializer = messageBusDeserializer;
-        _mediator = mediator;
+        _busMessageParser = busMessageParser;
+        _mappingCache = mappingCache;
+        _integrationEventHandler = integrationEventHandler;
     }
 
     [HttpPost]
     public async Task<IActionResult> HandleBusMessageAsync(
-        JsonElement envelope,
+        JsonDocument requestBody,
         CancellationToken cancellationToken)
     {
-        if (!_messageBusDeserializer.TryDeserializeMessage(envelope, out var deserializedMessage, out var messageExtraDetails, out var validationError))
+        if (!_busMessageParser.TryParseMessage(requestBody, out var parsedMessageEnvelope, out var parseFailureReason))
         {
-            return BadRequest(validationError);
+            _logger.LogError("Failed to parse message, parseFailureReason: {ParseFailureReason}", parseFailureReason);
+            return BadRequest(parseFailureReason);
         }
 
-        var senderApplicationId = messageExtraDetails.SourceId;
+        _logger.LogDebug(
+            "Parsed message: id {Id}, type: {Type}, payload: {Payload}",
+            parsedMessageEnvelope.MessageId, parsedMessageEnvelope.MessageType, parsedMessageEnvelope.MessagePayload);
 
-        if (deserializedMessage is AddDeviceRequest addDeviceRequest)
+        if (!_mappingCache.IsIntegrationEventForWebPushService(parsedMessageEnvelope))
         {
-            await AddDeviceAsync(addDeviceRequest, senderApplicationId, cancellationToken);
-        }
-        else if (deserializedMessage is NotifyUserDevicesRequest notifyUserDevicesRequest)
-        {
-            await NotifyUserDevicesAsync(notifyUserDevicesRequest, senderApplicationId, cancellationToken);
-        }
-        else
-        {
-            return BadRequest($"Unsupported message type '{deserializedMessage.GetType().FullName}'");
+            _logger.LogError(
+                "Unknown message type (not an integration event), message id {MessageId}, message type {MessageType}",
+                parsedMessageEnvelope.MessageId, parsedMessageEnvelope.MessageType);
+
+            return BadRequest("Unknown message type (not an integration event)");
         }
 
-        return NoContent();
-    }
+        var deserializeOptions = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+        var messagePayload = JsonSerializer.Deserialize<JsonDocument>(parsedMessageEnvelope.MessagePayload ?? "{}", deserializeOptions);
 
-    private async Task AddDeviceAsync(AddDeviceRequest addDeviceRequest, string senderApplicationId, CancellationToken cancellationToken)
-    {
-        var command = new AddDevice.Payload
+        if (messagePayload == null)
         {
-            ApplicationId = senderApplicationId,
-            DeviceId = addDeviceRequest.DeviceId,
-            UserId = addDeviceRequest.UserId,
-            DeviceEndpoint = addDeviceRequest.DeviceEndpoint,
-            P256dh = addDeviceRequest.P256dh,
-            AuthSecret = addDeviceRequest.AuthSecret,
-        };
+            _logger.LogError(
+                "Parsed message deserialization resulted in NULL, message id {MessageId}, type {MessageType}, source: {Source}",
+                parsedMessageEnvelope.MessageId, parsedMessageEnvelope.MessageType, parsedMessageEnvelope.Source);
 
-        await _mediator.Send(command, cancellationToken);
-    }
-
-    private async Task NotifyUserDevicesAsync(NotifyUserDevicesRequest notifyUserDevicesRequest, string senderApplicationId, CancellationToken cancellationToken)
-    {
-        var userId = notifyUserDevicesRequest.UserId;
-
-        var query = new GetAllDevicesOfUser.Query
-        {
-            ApplicationId = senderApplicationId,
-            UserId = userId,
-        };
-        var devices = await _mediator.Send(query, cancellationToken);
-
-        if (devices.Count == 0)
-        {
-            _logger.LogWarning("No devices found for user id '{UserId}' and application id '{ApplicationId}'", userId, senderApplicationId);
-
-            var TODO = "Send NoDevicesForUserDto event";
-            // const string eventType = "Firepuma.WebPush.NoDevicesForUser";
-            //
-            // var eventData = new NoDevicesForUserDto
-            // {
-            //     ApplicationId = applicationId,
-            //     UserId = userId,
-            // };
-            //
-            // var e = new EventGridEvent(eventGridSubject, eventType, "1.0.0", eventData);
-            // await eventCollector.AddAsync(e, cancellationToken);
-
-            return;
+            return BadRequest("Parsed message deserialization resulted in NULL");
         }
 
-        var successfulCount = 0;
-        var errors = new List<string>();
-        foreach (var device in devices)
+        var integrationEventEnvelope =
+            parsedMessageEnvelope.MessageId != BusMessagingPubSubConstants.LOCAL_DEVELOPMENT_PARSED_MESSAGE_ID
+                ? messagePayload.Deserialize<IntegrationEventEnvelope>()
+                : new IntegrationEventEnvelope // this version is typically used for local development
+                {
+                    EventId = parsedMessageEnvelope.MessageId,
+                    EventType = parsedMessageEnvelope.MessageType,
+                    EventPayload = parsedMessageEnvelope.MessagePayload!,
+                };
+
+        if (integrationEventEnvelope == null)
         {
-            try
-            {
-                _logger.LogInformation(
-                    "Processing request for DeviceId '{DeviceId}', ApplicationId '{ApplicationId}' and UserId '{UserId}'",
-                    device.DeviceId, senderApplicationId, device.UserId);
+            _logger.LogError(
+                "IntegrationEventEnvelope deserialization resulted in a NULL, message id {MessageId}, type {MessageType}, source: {Source}",
+                parsedMessageEnvelope.MessageId, parsedMessageEnvelope.MessageType, parsedMessageEnvelope.Source);
 
-                var TODO = "These empty string values are wrong";
-                var eventGridSubject = "";
-
-                var result = await SendPushNotificationToDevice(
-                    device,
-                    notifyUserDevicesRequest,
-                    senderApplicationId,
-                    eventGridSubject,
-                    // eventCollector,
-                    cancellationToken);
-
-                var TODO2 = "Do successfulCount++ or errors.Add";
-                // if (result.IsSuccessful)
-                // {
-                //     successfulCount++;
-                // }
-                // else
-                // {
-                //     errors.Add($"Unable to send notification to device, reason: {result.FailedReason.ToString()}, errors: {string.Join(", ", result.FailedErrors)}");
-                // }
-            }
-            catch (Exception exception)
-            {
-                errors.Add($"Unable to send push notification to device id '{device.DeviceId}' of application id '{device.ApplicationId}', error: {exception.Message}");
-            }
+            return BadRequest("IntegrationEventEnvelope deserialization resulted in a NULL");
         }
 
-        if (errors.Count > 0)
+        var handled = await _integrationEventHandler.TryHandleEvent(parsedMessageEnvelope.Source, integrationEventEnvelope, cancellationToken);
+        if (!handled)
         {
-            if (successfulCount > 0)
-            {
-                _logger.LogError(
-                    "Only {SuccessCount}/{TotalCount} push notifications succeeded for user id '{UserId}' of application id '{ApplicationId}', considering it a partial success",
-                    successfulCount, devices.Count, userId, senderApplicationId);
-                return;
-            }
-
-            var combinedErrors = string.Join(". ", errors);
-            throw new Exception($"Only {successfulCount}/{devices.Count} push notifications succeeded for user id '{userId}' of application id '{senderApplicationId}', errors were: {combinedErrors}");
+            _logger.LogError(
+                "Integration event was not handled for message id {MessageId}, event type {EventType}",
+                parsedMessageEnvelope.MessageId, integrationEventEnvelope.EventType);
+            return BadRequest("Integration event was not handled");
         }
-    }
 
-    private async Task<NotifyDevice.Result> SendPushNotificationToDevice(
-        WebPushDeviceEntity device,
-        NotifyUserDevicesRequest notifyUserDevicesRequest,
-        string applicationId,
-        string eventGridSubject,
-        CancellationToken cancellationToken)
-    {
-        var deviceEndpoint = device.DeviceEndpoint;
-
-        var command = new NotifyDevice.Payload
-        {
-            DeviceEndpoint = deviceEndpoint,
-            P256dh = device.P256dh,
-            AuthSecret = device.AuthSecret,
-            MessageTitle = notifyUserDevicesRequest.MessageTitle,
-            MessageText = notifyUserDevicesRequest.MessageText,
-            MessageType = notifyUserDevicesRequest.MessageType,
-            MessageUrgency = notifyUserDevicesRequest.MessageUrgency?.GetEnumDescriptionOrNull() ?? notifyUserDevicesRequest.MessageUrgency?.ToString() ?? null,
-            // MessageUniqueTopicId = requestDto.MessageUniqueTopicId, //TODO: could not get topic working, tested Chrome and MSEdge browsers
-        };
-
-        var result = await _mediator.Send(command, cancellationToken);
-
-        var TODO = "Handle non-successful, or will Friendly exception middleware handle it?";
-        // if (!result.IsSuccessful)
-        // {
-        //     if (result.FailedReason == NotifyDevice.Result.FailureReason.DeviceGone)
-        //     {
-        //         log.LogWarning("Push device endpoint does not exist anymore: '{DeviceEndpoint}'", deviceEndpoint);
-        //
-        //         var moveCommand = new MoveToUnsubscribedDevices.Payload
-        //         {
-        //             Device = device,
-        //             UnsubscribeReason = $"{result.FailedReason.ToString()} {string.Join(", ", result.FailedErrors)}",
-        //         };
-        //
-        //         await _mediator.Send(moveCommand, cancellationToken);
-        //
-        //         // const string eventType = "Firepuma.WebPush.DeviceUnsubscribed";
-        //         //
-        //         // var eventData = new DeviceUnsubscribedDto
-        //         // {
-        //         //     ApplicationId = applicationId,
-        //         //     DeviceId = device.DeviceId,
-        //         //     UserId = device.UserId,
-        //         // };
-        //         //
-        //         // var e = new EventGridEvent(eventGridSubject, eventType, "1.0.0", eventData);
-        //         // await eventCollector.AddAsync(e, cancellationToken);
-        //     }
-        //     else
-        //     {
-        //         _logger.LogError(
-        //             "Failed to send push notification to device endpoint '{DeviceEndpoint}', failure reason '{Reason}', failure errors '{Errors}'",
-        //             deviceEndpoint, result.FailedReason.ToString(), string.Join(", ", result.FailedErrors));
-        //
-        //         throw new Exception($"Failed to send push notification to device endpoint '{deviceEndpoint}', failure reason '{result.FailedReason.ToString()}', failure errors '{string.Join(", ", result.FailedErrors)}'");
-        //     }
-        // }
-
-        return result;
+        return Accepted(integrationEventEnvelope);
     }
 }
