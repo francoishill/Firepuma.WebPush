@@ -35,6 +35,16 @@ public class PubSubListenerController : ControllerBase
         JsonDocument requestBody,
         CancellationToken cancellationToken)
     {
+        if (requestBody.RootElement.TryGetProperty("GithubWorkflowEventName", out var githubWorkflowEventName)
+            && string.Equals(githubWorkflowEventName.ToString(), "NewRevisionDeployed", StringComparison.OrdinalIgnoreCase))
+        {
+            _logger.LogInformation("Detected a GithubWorkflowEventName message for 'NewRevisionDeployed', now running once-off logic after new deployments");
+
+            _logger.LogError("TODO: implement handling of GithubWorkflowEventName message for 'NewRevisionDeployed'");
+
+            return Accepted("Detected a GithubWorkflowEventName message for 'NewRevisionDeployed', ran once-off logic after new deployments");
+        }
+
         if (!_busMessageParser.TryParseMessage(requestBody, out var parsedMessageEnvelope, out var parseFailureReason))
         {
             _logger.LogError("Failed to parse message, parseFailureReason: {ParseFailureReason}", parseFailureReason);
