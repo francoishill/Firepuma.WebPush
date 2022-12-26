@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Firepuma.BusMessaging.Abstractions.Services;
@@ -35,18 +36,21 @@ public class PubSubListenerController : ControllerBase
         JsonDocument requestBody,
         CancellationToken cancellationToken)
     {
-        if (requestBody.RootElement.TryGetProperty("GithubWorkflowEventName", out var githubWorkflowEventName)
-            && string.Equals(githubWorkflowEventName.ToString(), "NewRevisionDeployed", StringComparison.OrdinalIgnoreCase))
-        {
-            _logger.LogInformation("Detected a GithubWorkflowEventName message for 'NewRevisionDeployed', now running once-off logic after new deployments");
-
-            _logger.LogError("TODO: implement handling of GithubWorkflowEventName message for 'NewRevisionDeployed'");
-
-            return Accepted("Detected a GithubWorkflowEventName message for 'NewRevisionDeployed', ran once-off logic after new deployments");
-        }
-
         if (!_busMessageParser.TryParseMessage(requestBody, out var parsedMessageEnvelope, out var parseFailureReason))
         {
+            if (
+                requestBody.RootElement.TryGetProperty("message", out var pubSubMessage)
+                && pubSubMessage.TryGetProperty("data", out var messageData)
+                && DataContainsGithubWorkflowEventName(messageData.GetString() ?? "{}", out var githubWorkflowEventName)
+                && string.Equals(githubWorkflowEventName, "NewRevisionDeployed", StringComparison.OrdinalIgnoreCase))
+            {
+                _logger.LogInformation("Detected a GithubWorkflowEventName message for 'NewRevisionDeployed', now running once-off logic after new deployments");
+
+                _logger.LogError("TODO: implement handling of GithubWorkflowEventName message for 'NewRevisionDeployed'");
+
+                return Accepted("Detected a GithubWorkflowEventName message for 'NewRevisionDeployed', ran once-off logic after new deployments");
+            }
+
             _logger.LogError("Failed to parse message, parseFailureReason: {ParseFailureReason}", parseFailureReason);
             _logger.LogDebug("Message that failed to parse had body: {Body}", JsonSerializer.Serialize(requestBody));
             return BadRequest(parseFailureReason);
@@ -110,5 +114,42 @@ public class PubSubListenerController : ControllerBase
         }
 
         return Accepted(integrationEventEnvelope);
+    }
+
+    private static bool DataContainsGithubWorkflowEventName(
+        string data,
+        [NotNullWhen(true)] out string? githubWorkflowEventName)
+    {
+        var dataString = System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(data));
+        if (dataString.Contains("GithubWorkflowEventName"))
+        {
+            try
+            {
+                var deserializeOptions = new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true,
+                    Converters = { new JsonStringEnumConverter() },
+                };
+                var container = JsonSerializer.Deserialize<GithubWorkflowEventContainer>(dataString, deserializeOptions);
+                if (!string.IsNullOrWhiteSpace(container?.GithubWorkflowEventName))
+                {
+                    githubWorkflowEventName = container.GithubWorkflowEventName;
+                    return true;
+                }
+            }
+            catch (Exception)
+            {
+                githubWorkflowEventName = null;
+                return false;
+            }
+        }
+
+        githubWorkflowEventName = null;
+        return false;
+    }
+
+    private class GithubWorkflowEventContainer
+    {
+        public string GithubWorkflowEventName { get; set; } = null!;
     }
 }
