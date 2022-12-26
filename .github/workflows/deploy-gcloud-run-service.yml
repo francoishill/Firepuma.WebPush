@@ -53,3 +53,10 @@ jobs:
 
       - name: Show Url
         run: echo ${{ steps.deploy.outputs.url }}
+
+      - name: Notify deployed via PubSub
+        env:
+          PUBSUB_TOPIC: 'projects/${{ env.PROJECT_ID }}/topics/${{ env.SERVICE }}'
+          MESSAGE_PAYLOAD: '{ "Source": "GithubWorkflow", "EventName": "NewRevisionDeployed" }'
+        run: |-
+          gcloud pubsub topics publish '${{ env.PUBSUB_TOPIC }}' --message '${{ env.MESSAGE_PAYLOAD }}'
