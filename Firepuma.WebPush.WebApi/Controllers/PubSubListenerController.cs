@@ -48,6 +48,7 @@ public class PubSubListenerController : ControllerBase
         if (!_busMessageParser.TryParseMessage(requestBody, out var parsedMessageEnvelope, out var parseFailureReason))
         {
             _logger.LogError("Failed to parse message, parseFailureReason: {ParseFailureReason}", parseFailureReason);
+            _logger.LogDebug("Message that failed to parse had body: {Body}", JsonSerializer.Serialize(requestBody));
             return BadRequest(parseFailureReason);
         }
 
