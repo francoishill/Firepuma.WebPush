@@ -2,7 +2,7 @@
 
 ## Introduction
 
-This solution was generated with [francoishill/Firepuma.WebPush](https://github.com/francoishill/Firepuma.WebPush).
+This solution was generated with [francoishill/Firepuma.Template.GoogleCloudRunService](https://github.com/francoishill/Firepuma.Template.GoogleCloudRunService).
 
 The following projects were generated as part of the solution:
 
