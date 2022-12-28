@@ -52,7 +52,7 @@ public class PubSubListenerController : ControllerBase
 
                 await _mongoIndexesApplier.ApplyAllIndexes(cancellationToken);
 
-                return Accepted("Detected a GithubWorkflowEventName message for 'NewRevisionDeployed', ran once-off logic after new deployments");
+                return Ok("Detected a GithubWorkflowEventName message for 'NewRevisionDeployed', ran once-off logic after new deployments");
             }
 
             _logger.LogError("Failed to parse message, parseFailureReason: {ParseFailureReason}", parseFailureReason);
