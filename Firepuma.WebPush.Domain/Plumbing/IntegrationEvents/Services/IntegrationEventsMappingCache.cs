@@ -8,8 +8,6 @@ using Firepuma.EventMediation.IntegrationEvents.Abstractions;
 using Firepuma.EventMediation.IntegrationEvents.ValueObjects;
 using Firepuma.WebPush.Domain.Plumbing.IntegrationEvents.Abstractions;
 
-[assembly: InternalsVisibleTo("Firepuma.WebPush.Tests")]
-
 namespace Firepuma.WebPush.Domain.Plumbing.IntegrationEvents.Services;
 
 public class IntegrationEventsMappingCache :
