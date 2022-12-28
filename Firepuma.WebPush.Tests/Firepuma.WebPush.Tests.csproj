@@ -22,7 +22,7 @@
     </ItemGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\Firepuma.WebPush.WebApi\Firepuma.WebPush.WebApi.csproj" />
+      <ProjectReference Include="..\Firepuma.WebPush.Worker\Firepuma.WebPush.Worker.csproj" />
     </ItemGroup>
 
 </Project>

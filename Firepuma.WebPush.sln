@@ -6,7 +6,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Firepuma.WebPush.Infrastruc
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Firepuma.WebPush.Tests", "Firepuma.WebPush.Tests\Firepuma.WebPush.Tests.csproj", "{8264E332-2B52-47D4-A5FA-A0AB0AA92EB7}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Firepuma.WebPush.WebApi", "Firepuma.WebPush.WebApi\Firepuma.WebPush.WebApi.csproj", "{EC682CD5-BB0D-4CAD-A49D-31EF09C7FA9F}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Firepuma.WebPush.Worker", "Firepuma.WebPush.Worker\Firepuma.WebPush.Worker.csproj", "{EC682CD5-BB0D-4CAD-A49D-31EF09C7FA9F}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SolutionFiles", "SolutionFiles", "{0EC384C4-88D3-4F4A-98A0-44D2C4A04B88}"
 	ProjectSection(SolutionItems) = preProject

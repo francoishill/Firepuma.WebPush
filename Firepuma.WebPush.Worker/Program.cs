@@ -4,9 +4,9 @@ using Firepuma.WebPush.Infrastructure;
 using Firepuma.WebPush.Infrastructure.Plumbing.CommandHandling;
 using Firepuma.WebPush.Infrastructure.Plumbing.IntegrationEvents;
 using Firepuma.WebPush.Infrastructure.Plumbing.MongoDb;
-using Firepuma.WebPush.WebApi.Controllers;
-using Firepuma.WebPush.WebApi.Exceptions;
-using Firepuma.WebPush.WebApi.Middleware;
+using Firepuma.WebPush.Worker.Controllers;
+using Firepuma.WebPush.Worker.Exceptions;
+using Firepuma.WebPush.Worker.Middleware;
 using Google.Cloud.Diagnostics.Common;
 
 var builder = WebApplication.CreateBuilder(args);

@@ -6,7 +6,7 @@ on:
       - main
 
 env:
-  ENTRY_PROJECT_DIR: Firepuma.WebPush.WebApi
+  ENTRY_PROJECT_DIR: Firepuma.WebPush.Worker
 
 jobs:
   unit-tests:

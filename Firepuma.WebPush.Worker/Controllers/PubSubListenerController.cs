@@ -9,7 +9,7 @@ using Firepuma.EventMediation.IntegrationEvents.ValueObjects;
 using Firepuma.WebPush.Domain.Plumbing.IntegrationEvents.Abstractions;
 using Microsoft.AspNetCore.Mvc;
 
-namespace Firepuma.WebPush.WebApi.Controllers;
+namespace Firepuma.WebPush.Worker.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]

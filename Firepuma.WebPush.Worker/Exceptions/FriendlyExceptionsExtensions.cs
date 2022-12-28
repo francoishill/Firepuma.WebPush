@@ -2,7 +2,7 @@
 using Firepuma.CommandsAndQueries.Abstractions.Exceptions;
 using Microsoft.AspNetCore.Diagnostics;
 
-namespace Firepuma.WebPush.WebApi.Exceptions;
+namespace Firepuma.WebPush.Worker.Exceptions;
 
 public static class FriendlyExceptionsExtensions
 {

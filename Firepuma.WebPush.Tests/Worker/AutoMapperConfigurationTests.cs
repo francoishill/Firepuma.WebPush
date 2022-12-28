@@ -1,8 +1,8 @@
 ﻿using System.Reflection;
 using AutoMapper;
-using Firepuma.WebPush.WebApi.Controllers;
+using Firepuma.WebPush.Worker.Controllers;
 
-namespace Firepuma.WebPush.Tests.WebApi;
+namespace Firepuma.WebPush.Tests.Worker;
 
 public class AutoMapperConfigurationTests
 {

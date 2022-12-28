@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 
-namespace Firepuma.WebPush.WebApi.Controllers;
+namespace Firepuma.WebPush.Worker.Controllers;
 
 [ApiController]
 [Route("[controller]")]

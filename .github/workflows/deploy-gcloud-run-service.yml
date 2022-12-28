@@ -6,7 +6,7 @@ on:
       - main
 
 env:
-  ENTRY_PROJECT_DIR: Firepuma.WebPush.WebApi
+  ENTRY_PROJECT_DIR: Firepuma.WebPush.Worker
   PROJECT_ID: firepuma-microservices
   ARTIFACT_REGISTRY: europe-west1-docker.pkg.dev
   IMAGE_REPOSITORY: firepuma-microservices-artifact-repository

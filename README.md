@@ -9,7 +9,7 @@ The following projects were generated as part of the solution:
 * Firepuma.WebPush.Domain project contains the domain logic (not tightly coupled to Mongo or other infrastructure specifics)
 * Firepuma.WebPush.Infrastructure contains infrastructure code, like mongo repositories inheriting from `MongoDbRepository<T>`
 * Firepuma.WebPush.Tests contains unit tests
-* Firepuma.WebPush.WebApi project contains the webapi service that will get deployed to Google Cloud Run
+* Firepuma.WebPush.Worker project contains the service that will get deployed to Google Cloud Run
 
 ---
 
@@ -20,7 +20,7 @@ When using github, the deployment will happen automatically due to the folder co
 To test locally whether the Dockerfile can build, run the following command:
 
 ```shell
-docker build --tag tmp-test-webpush-service --file Firepuma.WebPush.WebApi/Dockerfile .
+docker build --tag tmp-test-webpush-service --file Firepuma.WebPush.Worker/Dockerfile .
 ```
 
 Run `npx web-push generate-vapid-keys` to generate public and private keypair for WebPush.
