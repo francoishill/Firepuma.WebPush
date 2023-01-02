@@ -86,6 +86,7 @@ public static class NotifyDeviceCommand
             await _webPushService.NotifyDeviceAsync(serviceRequest, cancellationToken);
 
             var TODO = "Handle non-successful, like DeviceGone failure (unless some Friendly exception middleware will handle it?)";
+            _logger.LogError("TODO: push message won't be sent since the code is commented out and unfinished");
             // if (!result.IsSuccessful)
             // {
             //     if (result.FailedReason == NotifyDevice.Result.FailureReason.DeviceGone)
