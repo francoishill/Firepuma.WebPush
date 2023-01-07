@@ -109,6 +109,8 @@ public static class NotifyDeviceCommand
                 // since this is an exception and not part of the "happy path" of this Command, we publish
                 // the event from within this Command
 
+                _logger.LogWarning("Device subscription is gone, will now send integration event and move the device to the UnsubscribedDevice collection");
+
                 var deviceSubscriptionGoneEvent = new DeviceSubscriptionGoneEvent
                 {
                     ApplicationId = payload.ApplicationId,
