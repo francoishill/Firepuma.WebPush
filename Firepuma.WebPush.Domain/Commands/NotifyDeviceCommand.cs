@@ -1,5 +1,10 @@
 ﻿using Firepuma.CommandsAndQueries.Abstractions.Commands;
 using Firepuma.CommandsAndQueries.Abstractions.Entities.Attributes;
+using Firepuma.Dtos.WebPush.BusMessages;
+using Firepuma.EventMediation.IntegrationEvents.Abstractions;
+using Firepuma.WebPush.Domain.Entities;
+using Firepuma.WebPush.Domain.Exceptions;
+using Firepuma.WebPush.Domain.Repositories;
 using Firepuma.WebPush.Domain.Services;
 using Firepuma.WebPush.Domain.Services.ServiceRequests;
 using FluentValidation;
@@ -57,13 +62,25 @@ public static class NotifyDeviceCommand
     {
         private readonly ILogger<Handler> _logger;
         private readonly IWebPushService _webPushService;
+        private readonly IIntegrationEventEnvelopeFactory _envelopeFactory;
+        private readonly IIntegrationEventPublisher _integrationEventPublisher;
+        private readonly IWebPushDeviceRepository _webPushDeviceRepository;
+        private readonly IUnsubscribedPushDeviceRepository _unsubscribedPushDeviceRepository;
 
         public Handler(
             ILogger<Handler> logger,
-            IWebPushService webPushService)
+            IWebPushService webPushService,
+            IIntegrationEventEnvelopeFactory envelopeFactory,
+            IIntegrationEventPublisher integrationEventPublisher,
+            IWebPushDeviceRepository webPushDeviceRepository,
+            IUnsubscribedPushDeviceRepository unsubscribedPushDeviceRepository)
         {
             _logger = logger;
             _webPushService = webPushService;
+            _envelopeFactory = envelopeFactory;
+            _integrationEventPublisher = integrationEventPublisher;
+            _webPushDeviceRepository = webPushDeviceRepository;
+            _unsubscribedPushDeviceRepository = unsubscribedPushDeviceRepository;
         }
 
         public async Task<Result> Handle(Payload payload, CancellationToken cancellationToken)
@@ -83,47 +100,67 @@ public static class NotifyDeviceCommand
                 MessageUrgency = payload.MessageUrgency,
             };
 
-            await _webPushService.NotifyDeviceAsync(serviceRequest, cancellationToken);
+            try
+            {
+                await _webPushService.NotifyDeviceAsync(serviceRequest, cancellationToken);
+            }
+            catch (WebPushDeviceGoneException)
+            {
+                // since this is an exception and not part of the "happy path" of this Command, we publish
+                // the event from within this Command
 
-            var TODO = "Handle non-successful, like DeviceGone failure (unless some Friendly exception middleware will handle it?)";
-            _logger.LogError("TODO: push message won't be sent since the code is commented out and unfinished");
-            // if (!result.IsSuccessful)
-            // {
-            //     if (result.FailedReason == NotifyDevice.Result.FailureReason.DeviceGone)
-            //     {
-            //         log.LogWarning("Push device endpoint does not exist anymore: '{DeviceEndpoint}'", deviceEndpoint);
-            //
-            //         var moveCommand = new MoveToUnsubscribedDevices.Payload
-            //         {
-            //             Device = device,
-            //             UnsubscribeReason = $"{result.FailedReason.ToString()} {string.Join(", ", result.FailedErrors)}",
-            //         };
-            //
-            //         await _mediator.Send(moveCommand, cancellationToken);
-            //
-            //         // const string eventType = "Firepuma.WebPush.DeviceUnsubscribed";
-            //         //
-            //         // var eventData = new DeviceUnsubscribedDto
-            //         // {
-            //         //     ApplicationId = applicationId,
-            //         //     DeviceId = device.DeviceId,
-            //         //     UserId = device.UserId,
-            //         // };
-            //         //
-            //         // var e = new EventGridEvent(eventGridSubject, eventType, "1.0.0", eventData);
-            //         // await eventCollector.AddAsync(e, cancellationToken);
-            //     }
-            //     else
-            //     {
-            //         _logger.LogError(
-            //             "Failed to send push notification to device endpoint '{DeviceEndpoint}', failure reason '{Reason}', failure errors '{Errors}'",
-            //             deviceEndpoint, result.FailedReason.ToString(), string.Join(", ", result.FailedErrors));
-            //
-            //         throw new Exception($"Failed to send push notification to device endpoint '{deviceEndpoint}', failure reason '{result.FailedReason.ToString()}', failure errors '{string.Join(", ", result.FailedErrors)}'");
-            //     }
-            // }
+                var deviceSubscriptionGoneEvent = new DeviceSubscriptionGoneEvent
+                {
+                    ApplicationId = payload.ApplicationId,
+                    DeviceId = payload.DeviceId,
+                    UserId = payload.UserId,
+                };
+
+                var integrationEventEnvelope = _envelopeFactory.CreateEnvelopeFromObject(deviceSubscriptionGoneEvent);
+
+                await _integrationEventPublisher.SendAsync(integrationEventEnvelope, cancellationToken);
+
+                var device = await _webPushDeviceRepository.GetItemOrDefaultAsync(payload.DeviceDatabaseEntityId, cancellationToken);
+                if (device == null)
+                {
+                    _logger.LogError(
+                        "Device subscription is gone but unable to find device in database with DeviceDatabaseEntityId {Id}, will skip removing it from the database and adding to UnsubscribedDevices collection",
+                        payload.DeviceDatabaseEntityId);
+                    return new Result();
+                }
+
+                const string unsubscribeReason = "Device subscription gone";
+                await AddUnsubscribedDevice(device, unsubscribeReason, cancellationToken);
+                await RemoveDevice(device, cancellationToken);
+            }
 
             return new Result();
+        }
+
+        private async Task AddUnsubscribedDevice(
+            WebPushDeviceEntity device,
+            string unsubscribeReason,
+            CancellationToken cancellationToken)
+        {
+            var deviceEndpoint = device.DeviceEndpoint;
+
+            var unsubscribedDevice = new UnsubscribedPushDeviceEntity
+            {
+                ApplicationId = device.ApplicationId,
+                DeviceId = device.DeviceId,
+                UserId = device.UserId,
+                DeviceEndpoint = deviceEndpoint,
+                UnsubscribeReason = unsubscribeReason,
+            };
+
+            await _unsubscribedPushDeviceRepository.AddItemAsync(unsubscribedDevice, cancellationToken);
+        }
+
+        private async Task RemoveDevice(
+            WebPushDeviceEntity device,
+            CancellationToken cancellationToken)
+        {
+            await _webPushDeviceRepository.DeleteItemAsync(device, cancellationToken: cancellationToken);
         }
     }
 }

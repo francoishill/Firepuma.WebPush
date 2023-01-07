@@ -6,7 +6,7 @@ using Firepuma.WebPush.Domain.Commands;
 // ReSharper disable InlineTemporaryVariable
 // ReSharper disable UnusedType.Global
 
-namespace Firepuma.WebPush.Domain.Plumbing.IntegrationEvents.CommandFactories;
+namespace Firepuma.WebPush.Domain.CommandFactories;
 
 public class AddDeviceRequestCommandsFactory : ICommandsFactory<AddDeviceRequest>
 {

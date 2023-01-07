@@ -25,6 +25,15 @@ public class WebPushDeviceEntity : BaseMongoDbEntity
                 {
                     Unique = true,
                 }),
+            new CreateIndexModel<WebPushDeviceEntity>(Builders<WebPushDeviceEntity>.IndexKeys.Combine(
+                    Builders<WebPushDeviceEntity>.IndexKeys.Ascending(p => p.ApplicationId),
+                    Builders<WebPushDeviceEntity>.IndexKeys.Ascending(p => p.UserId),
+                    Builders<WebPushDeviceEntity>.IndexKeys.Ascending(p => p.DeviceId)
+                ),
+                new CreateIndexOptions<WebPushDeviceEntity>
+                {
+                    Unique = true,
+                }),
         };
     }
 }

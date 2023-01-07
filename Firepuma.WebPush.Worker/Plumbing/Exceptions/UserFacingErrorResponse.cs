@@ -5,7 +5,7 @@ using Firepuma.CommandsAndQueries.Abstractions.Exceptions;
 // ReSharper disable MemberCanBePrivate.Global
 // ReSharper disable ClassNeverInstantiated.Global
 
-namespace Firepuma.WebPush.Worker.Exceptions;
+namespace Firepuma.WebPush.Worker.Plumbing.Exceptions;
 
 public class UserFacingErrorResponse
 {

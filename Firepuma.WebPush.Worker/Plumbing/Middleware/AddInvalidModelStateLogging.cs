@@ -1,4 +1,4 @@
-﻿namespace Firepuma.WebPush.Worker.Middleware;
+﻿namespace Firepuma.WebPush.Worker.Plumbing.Middleware;
 
 public static class InvalidModelStateLoggingExtensions
 {

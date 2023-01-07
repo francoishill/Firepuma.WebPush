@@ -1,5 +1,4 @@
 using System.Diagnostics.CodeAnalysis;
-using System.Runtime.CompilerServices;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Firepuma.BusMessaging.Abstractions.Services.Results;
@@ -12,6 +11,7 @@ namespace Firepuma.WebPush.Domain.Plumbing.IntegrationEvents.Services;
 
 public class IntegrationEventsMappingCache :
     IIntegrationEventsMappingCache,
+    IIntegrationEventTypeProvider,
     IIntegrationEventDeserializer
 {
     private static bool IsIntegrationEventForWebPushService(string messageType)
@@ -22,6 +22,24 @@ public class IntegrationEventsMappingCache :
     public bool IsIntegrationEventForWebPushService(BusMessageEnvelope envelope)
     {
         return IsIntegrationEventForWebPushService(envelope.MessageType);
+    }
+
+    public bool IsIntegrationEventForEventMediator(string messageType)
+    {
+        return messageType.StartsWith("Firepuma/Events/");
+    }
+
+    public bool TryGetIntegrationEventType<TMessage>(TMessage messagePayload, [NotNullWhen(true)] out string? eventType)
+    {
+        eventType = messagePayload switch
+        {
+            DeviceSubscriptionGoneEvent => "Firepuma/Events/WebPush/DeviceSubscriptionGone",
+            NoDevicesForUserEvent => "Firepuma/Events/WebPush/NoDevicesForUser",
+
+            _ => null,
+        };
+
+        return eventType != null;
     }
 
     public bool TryDeserializeIntegrationEvent(

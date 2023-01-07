@@ -10,7 +10,7 @@ using Microsoft.Extensions.Logging;
 // ReSharper disable InlineTemporaryVariable
 // ReSharper disable UnusedType.Global
 
-namespace Firepuma.WebPush.Domain.Plumbing.IntegrationEvents.CommandFactories;
+namespace Firepuma.WebPush.Domain.CommandFactories;
 
 public class NotifyUserDevicesRequestCommandsFactory : ICommandsFactory<NotifyUserDevicesRequest>
 {
@@ -43,21 +43,16 @@ public class NotifyUserDevicesRequestCommandsFactory : ICommandsFactory<NotifyUs
 
         if (devices.Count == 0)
         {
-            _logger.LogWarning("No devices found for user id '{UserId}' and application id '{ApplicationId}'", userId, senderApplicationId);
+            _logger.LogError("No devices found for user id '{UserId}' and application id '{ApplicationId}'", userId, senderApplicationId);
 
-            var TODO = "Send NoDevicesForUserDto event";
-            // const string eventType = "Firepuma.WebPush.NoDevicesForUser";
-            //
-            // var eventData = new NoDevicesForUserDto
-            // {
-            //     ApplicationId = applicationId,
-            //     UserId = userId,
-            // };
-            //
-            // var e = new EventGridEvent(eventGridSubject, eventType, "1.0.0", eventData);
-            // await eventCollector.AddAsync(e, cancellationToken);
-
-            return Array.Empty<ICommandRequest>();
+            return new ICommandRequest[]
+            {
+                new HandleUserHasNoDevicesCommand.Payload
+                {
+                    ApplicationId = senderApplicationId,
+                    UserId = userId,
+                },
+            };
         }
 
         var commands = new List<ICommandRequest>();

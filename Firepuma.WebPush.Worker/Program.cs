@@ -5,8 +5,9 @@ using Firepuma.WebPush.Infrastructure.Plumbing.CommandHandling;
 using Firepuma.WebPush.Infrastructure.Plumbing.IntegrationEvents;
 using Firepuma.WebPush.Infrastructure.Plumbing.MongoDb;
 using Firepuma.WebPush.Worker.Controllers;
-using Firepuma.WebPush.Worker.Exceptions;
-using Firepuma.WebPush.Worker.Middleware;
+using Firepuma.WebPush.Worker.Plumbing.Exceptions;
+using Firepuma.WebPush.Worker.Plumbing.LocalDevelopment;
+using Firepuma.WebPush.Worker.Plumbing.Middleware;
 using Google.Cloud.Diagnostics.Common;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -32,7 +33,8 @@ builder.Services.AddCommandsAndQueriesFunctionality(
     mongoDbOptions.CommandExecutionsCollectionName,
     assembliesWithCommandHandlers);
 
-builder.Services.AddIntegrationEvents();
+var integrationEventsConfigSection = builder.Configuration.GetSection("IntegrationEvents");
+builder.Services.AddIntegrationEvents(integrationEventsConfigSection);
 
 var webPushConfigSection = builder.Configuration.GetSection("WebPush");
 builder.Services.AddWebPushFeature(
@@ -52,6 +54,11 @@ if (!builder.Environment.IsDevelopment())
             bufferOptions: BufferOptions.NoBuffer() //refer to https://github.com/googleapis/google-cloud-dotnet/pull/7025
         ),
     });
+}
+
+if (builder.Environment.IsDevelopment())
+{
+    builder.Services.AddLocalDevelopmentServices();
 }
 
 var app = builder.Build();
