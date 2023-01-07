@@ -33,8 +33,8 @@ public class IntegrationEventsMappingCache :
     {
         eventType = messagePayload switch
         {
-            DeviceSubscriptionGoneEvent e => $"Firepuma/Event/WebPush/appid={e.ApplicationId}/DeviceSubscriptionGone",
-            NoDevicesForUserEvent e => $"Firepuma/Event/WebPush/appid={e.ApplicationId}/NoDevicesForUser",
+            DeviceSubscriptionGoneEvent e => $"Firepuma/Event/appid={e.ApplicationId}/WebPush/DeviceSubscriptionGone",
+            NoDevicesForUserEvent e => $"Firepuma/Event/appid={e.ApplicationId}/WebPush/NoDevicesForUser",
 
             _ => null,
         };
