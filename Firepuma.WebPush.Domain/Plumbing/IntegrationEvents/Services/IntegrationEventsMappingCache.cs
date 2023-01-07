@@ -26,15 +26,15 @@ public class IntegrationEventsMappingCache :
 
     public bool IsIntegrationEventForEventMediator(string messageType)
     {
-        return messageType.StartsWith("Firepuma/Events/");
+        return messageType.StartsWith("Firepuma/Event/");
     }
 
     public bool TryGetIntegrationEventType<TMessage>(TMessage messagePayload, [NotNullWhen(true)] out string? eventType)
     {
         eventType = messagePayload switch
         {
-            DeviceSubscriptionGoneEvent => "Firepuma/Events/WebPush/DeviceSubscriptionGone",
-            NoDevicesForUserEvent => "Firepuma/Events/WebPush/NoDevicesForUser",
+            DeviceSubscriptionGoneEvent e => $"Firepuma/Event/WebPush/appid={e.ApplicationId}/DeviceSubscriptionGone",
+            NoDevicesForUserEvent e => $"Firepuma/Event/WebPush/appid={e.ApplicationId}/NoDevicesForUser",
 
             _ => null,
         };
